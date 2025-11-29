@@ -20,11 +20,7 @@ from .filters import BlogFilter, BlogViewFilter
 class BaseAnalyticsView(APIView):
 
     def get_filters_config(self, request):
-        """
-        Read optional dynamic filters from the request.
-        - Primary source: JSON body (supports GET with Content-Type: application/json)
-        - Fallback: request.query_params['filters'] for backward compatibility
-        """
+       
         filters_config = None
         
         # First, try to get filters from JSON body
@@ -57,7 +53,7 @@ class BaseAnalyticsView(APIView):
 class BlogViewsAnalyticsView(BaseAnalyticsView):
 
     def _get_cache_key(self, request):
-        """Generate cache key including body parameters."""
+      
         cache_key_parts = [request.path]
         
         if request.query_params:
@@ -74,17 +70,7 @@ class BlogViewsAnalyticsView(BaseAnalyticsView):
         return f"analytics:{request.path}:{cache_key}"
 
     def get(self, request):
-        """
-        Blog views analytics.
-
-        Supports sending parameters in the **GET body** (JSON) or as query params.
-        Recommended (body):
-        {
-            "object_type": "user",
-            "range": "month",
-            "filters": { ...optional dynamic filters... }
-        }
-        """
+       
         # Parse JSON body for GET requests if Content-Type is application/json
         payload = request.query_params.copy()
         if request.content_type == 'application/json' and request.body:
@@ -128,7 +114,7 @@ class BlogViewsAnalyticsView(BaseAnalyticsView):
 class TopAnalyticsView(BaseAnalyticsView):
 
     def _get_cache_key(self, request):
-        """Generate cache key including body parameters."""
+        
         cache_key_parts = [request.path]
         
         if request.query_params:
@@ -145,17 +131,7 @@ class TopAnalyticsView(BaseAnalyticsView):
         return f"analytics:{request.path}:{cache_key}"
 
     def get(self, request):
-        """
-        Top analytics.
-
-        Supports sending parameters in the **GET body** (JSON) or as query params.
-        Recommended (body):
-        {
-            "top": "blog",
-            "time_range": "last_30_days",   # optional
-            "filters": { ...optional dynamic filters... }
-        }
-        """
+       
         # Parse JSON body for GET requests if Content-Type is application/json
         payload = request.query_params.copy()
         if request.content_type == 'application/json' and request.body:
@@ -199,7 +175,7 @@ class TopAnalyticsView(BaseAnalyticsView):
 class PerformanceAnalyticsView(BaseAnalyticsView):
 
     def _get_cache_key(self, request):
-        """Generate cache key including body parameters."""
+       
         cache_key_parts = [request.path]
         
         if request.query_params:
@@ -216,17 +192,7 @@ class PerformanceAnalyticsView(BaseAnalyticsView):
         return f"analytics:{request.path}:{cache_key}"
 
     def get(self, request):
-        """
-        Performance analytics.
-
-        Supports sending parameters in the **GET body** (JSON) or as query params.
-        Recommended (body):
-        {
-            "compare": "month",
-            "user_id": 1,                 # optional
-            "filters": { ...optional dynamic filters... }
-        }
-        """
+      
         # Check cache first
         cache_key = self._get_cache_key(request)
         cached_data = cache.get(cache_key)
@@ -280,9 +246,7 @@ class BlogViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_class = BlogFilter
     
     def retrieve(self, request, *args, **kwargs):
-        """
-        Retrieve a blog and automatically increment its view count.
-        """
+      
         instance = self.get_object()
         
         # Automatically record the view when blog is opened
@@ -292,10 +256,7 @@ class BlogViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(serializer.data)
     
     def _record_view(self, blog):
-        """
-        Record a view for a blog. Gets or creates a single BlogView record per blog 
-        and increments the count every time this method is called (every API call).
-        """
+       
         now = timezone.now()
         
         try:
@@ -323,10 +284,7 @@ class BlogViewSet(viewsets.ReadOnlyModelViewSet):
     
     @action(detail=True, methods=['post'])
     def record_view(self, request, pk=None):
-        """
-        Manually record a view for a blog (optional endpoint if needed).
-        Views are now automatically tracked on GET requests to retrieve a blog.
-        """
+  
         blog = self.get_object()
         self._record_view(blog)
         

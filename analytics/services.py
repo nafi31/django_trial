@@ -149,7 +149,7 @@ class AnalyticsService:
             .order_by('period')
         )
         
-        # Get blogs created grouped by period
+     
         blog_qs = Blog.objects.all()
         if user_id:
             blog_qs = blog_qs.filter(author_id=user_id)
@@ -180,7 +180,7 @@ class AnalyticsService:
             else:
                 growth_pct = 100.0 if current_views > 0 else 0.0
 
-            # Format period label (e.g. "January 2025 (3 blogs)")
+       
             if date_trunc == 'month':
                 period_label_base = period.strftime('%B %Y')
             elif date_trunc == 'week':
@@ -236,7 +236,7 @@ class AnalyticsService:
         
         time_range_lower = time_range.lower().strip()
         
-        # Parse common time range formats
+      
         if 'last_7_days' in time_range_lower or '7_days' in time_range_lower:
             return now - timedelta(days=7)
         elif 'last_30_days' in time_range_lower or '30_days' in time_range_lower:
@@ -250,5 +250,5 @@ class AnalyticsService:
         elif 'last_month' in time_range_lower:
             return now - timedelta(days=30)
         else:
-            # Default to 30 days if format not recognized
+        
             return now - timedelta(days=30)
