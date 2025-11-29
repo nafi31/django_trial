@@ -23,7 +23,7 @@ class BaseAnalyticsView(APIView):
        
         filters_config = None
         
-        # First, try to get filters from JSON body
+      
         if request.content_type == 'application/json' and request.body:
             try:
                 import json
@@ -32,14 +32,13 @@ class BaseAnalyticsView(APIView):
             except (json.JSONDecodeError, ValueError):
                 pass
         
-        # Fallback to query params if not found in body
         if filters_config is None:
             filters_config = request.query_params.get("filters")
         
         if not filters_config:
             return None
 
-        # If filters are passed as a JSON string, parse them
+   
         if isinstance(filters_config, str):
             try:
                 import json
@@ -47,7 +46,7 @@ class BaseAnalyticsView(APIView):
             except json.JSONDecodeError:
                 return None
 
-        # Already a dict/list
+
         return filters_config
 
 class BlogViewsAnalyticsView(BaseAnalyticsView):
@@ -71,7 +70,7 @@ class BlogViewsAnalyticsView(BaseAnalyticsView):
 
     def get(self, request):
        
-        # Parse JSON body for GET requests if Content-Type is application/json
+      
         payload = request.query_params.copy()
         if request.content_type == 'application/json' and request.body:
             try:
@@ -102,7 +101,7 @@ class BlogViewsAnalyticsView(BaseAnalyticsView):
             )
             response_data = {'data': result}
             
-            # Cache the data (not the Response object) for 5 minutes
+       
             cache.set(cache_key, response_data, 60 * 5)
             return Response(response_data)
         except Exception as e:
@@ -132,7 +131,7 @@ class TopAnalyticsView(BaseAnalyticsView):
 
     def get(self, request):
        
-        # Parse JSON body for GET requests if Content-Type is application/json
+
         payload = request.query_params.copy()
         if request.content_type == 'application/json' and request.body:
             try:
@@ -142,7 +141,7 @@ class TopAnalyticsView(BaseAnalyticsView):
             except (json.JSONDecodeError, ValueError):
                 pass
         
-        # Check cache first
+
         cache_key = self._get_cache_key(request)
         cached_data = cache.get(cache_key)
         if cached_data is not None:
@@ -163,7 +162,7 @@ class TopAnalyticsView(BaseAnalyticsView):
             )
             response_data = {'data': result}
             
-            # Cache the data (not the Response object) for 10 minutes
+  
             cache.set(cache_key, response_data, 60 * 10)
             return Response(response_data)
         except Exception as e:
@@ -193,13 +192,13 @@ class PerformanceAnalyticsView(BaseAnalyticsView):
 
     def get(self, request):
       
-        # Check cache first
+   
         cache_key = self._get_cache_key(request)
         cached_data = cache.get(cache_key)
         if cached_data is not None:
             return Response(cached_data)
         
-        # Parse JSON body for GET requests if Content-Type is application/json
+
         payload = request.query_params.copy()
         if request.content_type == 'application/json' and request.body:
             try:
@@ -223,7 +222,7 @@ class PerformanceAnalyticsView(BaseAnalyticsView):
             )
             response_data = {'data': result}
             
-            # Cache the data (not the Response object) for 2 minutes
+           
             cache.set(cache_key, response_data, 60 * 2)
             return Response(response_data)
         except Exception as e:
@@ -249,7 +248,7 @@ class BlogViewSet(viewsets.ReadOnlyModelViewSet):
       
         instance = self.get_object()
         
-        # Automatically record the view when blog is opened
+
         self._record_view(instance)
         
         serializer = self.get_serializer(instance)
@@ -260,20 +259,20 @@ class BlogViewSet(viewsets.ReadOnlyModelViewSet):
         now = timezone.now()
         
         try:
-            # Get or create a single BlogView record for this blog
+     
             blog_view, created = BlogView.objects.get_or_create(
                 blog=blog,
                 defaults={'count': 1, 'viewed_at': now}
             )
             
             if not created:
-                # Always increment the count on every API call
+     
                 BlogView.objects.filter(id=blog_view.id).update(
                     count=F('count') + 1,
                     viewed_at=now
                 )
         except Exception as e:
-            # Fallback: try to increment if record exists, otherwise create
+      
             try:
                 BlogView.objects.filter(blog=blog).update(
                     count=F('count') + 1,
