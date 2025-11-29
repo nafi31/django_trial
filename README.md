@@ -1,5 +1,6 @@
 # Clone and setup
-git clone (django_trial)[https://github.com/nafi31/django_trial]
+git clone https://github.com/nafi31/django_trial
+
 cd analytics_test
 
 # Install dependencies
@@ -31,6 +32,15 @@ filters (optional): JSON filter configuration
 
 example request : GET http://127.0.0.1:8000/api/analytics/blog-views/?object_type=country&range=month 
 
+OR
+GET http://127.0.0.1:8000/api/analytics/blog-views/
+{
+  "object_type": "user",
+  "range": "month",
+  "filters": {
+    "eq": { "blog__author__country__name": "United States" }
+  }
+}
 ```
 
 # Top Analytics
@@ -48,6 +58,17 @@ Example Request:
 
 
 GET http://127.0.0.1:8000/api/analytics/top/?top=blog
+
+or 
+ GET http://127.0.0.1:8000/api/analytics/top/
+ with body 
+{
+  "top": "blog",
+  "time_range": "last_30_days",
+  "filters": {
+    "eq": { "blog__author__id": 1 }
+  }
+}
 ``` 
 # Performance Analytics
 ```Endpoint: GET /api/analytics/performance/
@@ -63,6 +84,16 @@ filters (optional): JSON filter configuration
 Example Request:
 GET http://127.0.0.1:8000/api/analytics/performance/?compare=month
 
+or
+GET http://127.0.0.1:8000/api/analytics/performance/
+
+{
+  "compare": "month",
+  "user_id": 1,
+  "filters": {
+    "eq": { "blog__author__country__name": "Canada" }
+  }
+}
 ```
 
  # Dynamic Filtering Examples
