@@ -1,17 +1,10 @@
 # Clone and setup
 git clone https://github.com/nafi31/django_trial
 
-cd analytics_test
 
 # Install dependencies
 pip install Django==4.2.7 djangorestframework==3.14.0 django-filter==23.3
 
-# Setup database
-python manage.py makemigrations
-python manage.py migrate
-
-# Create test data
-python create_test_data.py
 
 # Run server
 python manage.py runserver
