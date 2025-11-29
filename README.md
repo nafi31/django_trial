@@ -66,7 +66,7 @@ or
   "top": "blog",
   "time_range": "last_30_days",
   "filters": {
-    "eq": { "blog__author__id": 1 }
+    "eq": { "blog__author__id": 4 }
   }
 }
 ``` 
@@ -89,7 +89,7 @@ GET http://127.0.0.1:8000/api/analytics/performance/
 
 {
   "compare": "month",
-  "user_id": 1,
+  "user_id": 4,
   "filters": {
     "eq": { "blog__author__country__name": "Canada" }
   }
