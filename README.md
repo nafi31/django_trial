@@ -42,6 +42,8 @@ GET http://127.0.0.1:8000/api/analytics/blog-views/
   }
 }
 ```
+<img width="1360" height="563" alt="image" src="https://github.com/user-attachments/assets/a2ccf8a0-8c79-4f8c-837f-bd01a574cf03" />
+
 
 # Top Analytics
 ```Endpoint: GET /api/analytics/top/
@@ -69,7 +71,9 @@ or
     "eq": { "blog__author__id": 4 }
   }
 }
-``` 
+```
+<img width="1359" height="565" alt="image" src="https://github.com/user-attachments/assets/16e4503c-5fa9-42c2-8db0-ee0ea930c054" />
+
 # Performance Analytics
 ```Endpoint: GET /api/analytics/performance/
 
@@ -94,6 +98,9 @@ GET http://127.0.0.1:8000/api/analytics/performance/
     "eq": { "blog__author__country__name": "Canada" }
   }
 }
+
+<img width="1361" height="568" alt="image" src="https://github.com/user-attachments/assets/1c35a53b-02df-486d-8c85-56fd01d4969d" />
+
 ```
 
  # Dynamic Filtering Examples
