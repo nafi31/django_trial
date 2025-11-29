@@ -17,92 +17,144 @@ from .serializers import (
 from .filters import BlogFilter, BlogViewFilter
 
 class BaseAnalyticsView(APIView):
- 
-    
+
     def get_filters_config(self, request):
-     
-        filters_config = request.query_params.get('filters')
-        if filters_config:
+        """
+        Read optional dynamic filters from the request.
+        - Primary source: request.data (supports JSON body on GET/POST)
+        - Fallback: request.query_params['filters'] for backward compatibility
+        """
+        # Prefer JSON body if present
+        source = {}
+        try:
+            if getattr(request, "data", None):
+                source = request.data
+            elif request.query_params:
+                source = request.query_params
+        except Exception:
+            source = request.query_params
+
+        filters_config = source.get("filters")
+        if not filters_config:
+            return None
+
+        # If filters are passed as a JSON string, parse them
+        if isinstance(filters_config, str):
             try:
                 import json
                 return json.loads(filters_config)
             except json.JSONDecodeError:
                 return None
-        return None
+
+        # Already a dict/list
+        return filters_config
 
 class BlogViewsAnalyticsView(BaseAnalyticsView):
 
-    
     @method_decorator(cache_page(60 * 5))  # Cache for 5 minutes
     def get(self, request):
-        serializer = BlogViewsAnalyticsSerializer(data=request.query_params)
+        """
+        Blog views analytics.
+
+        Supports sending parameters in the **GET body** (JSON) or as query params.
+        Recommended (body):
+        {
+            "object_type": "user",
+            "range": "month",
+            "filters": { ...optional dynamic filters... }
+        }
+        """
+        payload = request.data if getattr(request, "data", None) else request.query_params
+        serializer = BlogViewsAnalyticsSerializer(data=payload)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
         data = serializer.validated_data
         filters_config = self.get_filters_config(request)
-        
+
         try:
             result = AnalyticsService.get_blog_views_analytics(
                 object_type=data['object_type'],
                 range_type=data['range'],
-                filters_config=filters_config
+                filters_config=filters_config,
             )
             return Response({'data': result})
         except Exception as e:
             return Response(
-                {'error': str(e)}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
 class TopAnalyticsView(BaseAnalyticsView):
 
-    
     @method_decorator(cache_page(60 * 10))  # Cache for 10 minutes
     def get(self, request):
-        serializer = TopAnalyticsSerializer(data=request.query_params)
+        """
+        Top analytics.
+
+        Supports sending parameters in the **GET body** (JSON) or as query params.
+        Recommended (body):
+        {
+            "top": "blog",
+            "time_range": "last_30_days",   # optional
+            "filters": { ...optional dynamic filters... }
+        }
+        """
+        payload = request.data if getattr(request, "data", None) else request.query_params
+        serializer = TopAnalyticsSerializer(data=payload)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
         data = serializer.validated_data
         filters_config = self.get_filters_config(request)
-        
+
         try:
             result = AnalyticsService.get_top_analytics(
                 top_type=data['top'],
                 filters_config=filters_config,
-                time_range=data.get('time_range')
+                time_range=data.get('time_range'),
             )
             return Response({'data': result})
         except Exception as e:
             return Response(
-                {'error': str(e)}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
 class PerformanceAnalyticsView(BaseAnalyticsView):
 
-    
     @method_decorator(cache_page(60 * 2))  # Cache for 2 minutes
     def get(self, request):
-        serializer = PerformanceAnalyticsSerializer(data=request.query_params)
+        """
+        Performance analytics.
+
+        Supports sending parameters in the **GET body** (JSON) or as query params.
+        Recommended (body):
+        {
+            "compare": "month",
+            "user_id": 1,                 # optional
+            "filters": { ...optional dynamic filters... }
+        }
+        """
+        payload = request.data if getattr(request, "data", None) else request.query_params
+        serializer = PerformanceAnalyticsSerializer(data=payload)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
         data = serializer.validated_data
         filters_config = self.get_filters_config(request)
-        
+
         try:
             result = AnalyticsService.get_performance_analytics(
                 compare=data['compare'],
                 user_id=data.get('user_id'),
-                filters_config=filters_config
+                filters_config=filters_config,
             )
             return Response({'data': result})
         except Exception as e:
             return Response(
-                {'error': str(e)}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
 

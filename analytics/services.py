@@ -136,7 +136,14 @@ class AnalyticsService:
             .values('period')
             .annotate(
                 number_of_blogs=Count('blog_id', distinct=True),
-                views=Sum('count')
+                views=Sum('count'),
+            )
+            .annotate(
+                previous_views=Window(
+                    expression=Lag('views'),
+                    partition_by=[],
+                    order_by=F('period').asc(),
+                )
             )
             .order_by('period')
         )
@@ -151,11 +158,7 @@ class AnalyticsService:
             .annotate(period=Trunc('created_at', date_trunc))
             .values('period')
             .annotate(
-                previous_views=Window(
-                    expression=Lag('views'),
-                    partition_by=[],
-                    order_by=F('period').asc()
-                )
+                blogs_created=Count('id')
             )
             .order_by('period')
         )
@@ -166,7 +169,8 @@ class AnalyticsService:
         
         result = []
         for item in performance_data:
-            period_label = f"{item['period'].strftime('%Y-%m-%d')} ({item['number_of_blogs']} blogs)"
+            period = item['period']
+            blogs_created = blogs_dict.get(period, 0)
             current_views = item['views'] or 0
             previous_views = item['previous_views'] or 0
             
@@ -174,7 +178,21 @@ class AnalyticsService:
                 growth_pct = ((current_views - previous_views) / previous_views) * 100
             else:
                 growth_pct = 100.0 if current_views > 0 else 0.0
-            
+
+            # Format period label (e.g. "January 2025 (3 blogs)")
+            if date_trunc == 'month':
+                period_label_base = period.strftime('%B %Y')
+            elif date_trunc == 'week':
+                period_label_base = period.strftime('%b %d, %Y')
+            elif date_trunc == 'day':
+                period_label_base = period.strftime('%B %d, %Y')
+            elif date_trunc == 'year':
+                period_label_base = period.strftime('%Y')
+            else:
+                period_label_base = period.strftime('%B %d, %Y')
+
+            period_label = f"{period_label_base} ({blogs_created} blogs)"
+
             result.append({
                 'x': period_label,
                 'y': current_views,
