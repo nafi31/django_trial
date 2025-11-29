@@ -99,10 +99,10 @@ GET http://127.0.0.1:8000/api/analytics/performance/
   }
 }
 
-<img width="1361" height="568" alt="image" src="https://github.com/user-attachments/assets/1c35a53b-02df-486d-8c85-56fd01d4969d" />
+
 
 ```
-
+<img width="1361" height="568" alt="image" src="https://github.com/user-attachments/assets/1c35a53b-02df-486d-8c85-56fd01d4969d" />
  # Dynamic Filtering Examples
 ### Filter by Country:
 Example Request:
