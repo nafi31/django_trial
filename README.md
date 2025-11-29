@@ -1,5 +1,5 @@
 # Clone and setup
-git clone <repository-url>
+git clone (django_trial)[https://github.com/nafi31/django_trial]
 cd analytics_test
 
 # Install dependencies
