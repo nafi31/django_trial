@@ -1,5 +1,5 @@
 # Clone and setup
-git clone https://github.com/nafi31/django_trial
+git clone https://github.com/nafi31/django_trial.git
 
 
 # Install dependencies
