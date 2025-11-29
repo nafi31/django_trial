@@ -2,12 +2,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
+from django.core.cache import cache
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from django.db.models import F
 from datetime import timedelta
+import hashlib
+import json
 from .models import User, Blog, BlogView
 from .services import AnalyticsService
 from .serializers import (
@@ -21,20 +22,24 @@ class BaseAnalyticsView(APIView):
     def get_filters_config(self, request):
         """
         Read optional dynamic filters from the request.
-        - Primary source: request.data (supports JSON body on GET/POST)
+        - Primary source: JSON body (supports GET with Content-Type: application/json)
         - Fallback: request.query_params['filters'] for backward compatibility
         """
-        # Prefer JSON body if present
-        source = {}
-        try:
-            if getattr(request, "data", None):
-                source = request.data
-            elif request.query_params:
-                source = request.query_params
-        except Exception:
-            source = request.query_params
-
-        filters_config = source.get("filters")
+        filters_config = None
+        
+        # First, try to get filters from JSON body
+        if request.content_type == 'application/json' and request.body:
+            try:
+                import json
+                body_data = json.loads(request.body)
+                filters_config = body_data.get("filters")
+            except (json.JSONDecodeError, ValueError):
+                pass
+        
+        # Fallback to query params if not found in body
+        if filters_config is None:
+            filters_config = request.query_params.get("filters")
+        
         if not filters_config:
             return None
 
@@ -51,7 +56,23 @@ class BaseAnalyticsView(APIView):
 
 class BlogViewsAnalyticsView(BaseAnalyticsView):
 
-    @method_decorator(cache_page(60 * 5))  # Cache for 5 minutes
+    def _get_cache_key(self, request):
+        """Generate cache key including body parameters."""
+        cache_key_parts = [request.path]
+        
+        if request.query_params:
+            cache_key_parts.append(str(sorted(request.query_params.items())))
+        
+        if request.content_type == 'application/json' and request.body:
+            try:
+                body_data = json.loads(request.body)
+                cache_key_parts.append(json.dumps(body_data, sort_keys=True))
+            except (json.JSONDecodeError, ValueError):
+                pass
+        
+        cache_key = hashlib.md5('|'.join(cache_key_parts).encode()).hexdigest()
+        return f"analytics:{request.path}:{cache_key}"
+
     def get(self, request):
         """
         Blog views analytics.
@@ -64,7 +85,22 @@ class BlogViewsAnalyticsView(BaseAnalyticsView):
             "filters": { ...optional dynamic filters... }
         }
         """
-        payload = request.data if getattr(request, "data", None) else request.query_params
+        # Parse JSON body for GET requests if Content-Type is application/json
+        payload = request.query_params.copy()
+        if request.content_type == 'application/json' and request.body:
+            try:
+                import json
+                body_data = json.loads(request.body)
+                payload.update(body_data)
+            except (json.JSONDecodeError, ValueError):
+                pass
+        
+        # Check cache first
+        cache_key = self._get_cache_key(request)
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            return Response(cached_data)
+        
         serializer = BlogViewsAnalyticsSerializer(data=payload)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -78,7 +114,11 @@ class BlogViewsAnalyticsView(BaseAnalyticsView):
                 range_type=data['range'],
                 filters_config=filters_config,
             )
-            return Response({'data': result})
+            response_data = {'data': result}
+            
+            # Cache the data (not the Response object) for 5 minutes
+            cache.set(cache_key, response_data, 60 * 5)
+            return Response(response_data)
         except Exception as e:
             return Response(
                 {'error': str(e)},
@@ -87,7 +127,23 @@ class BlogViewsAnalyticsView(BaseAnalyticsView):
 
 class TopAnalyticsView(BaseAnalyticsView):
 
-    @method_decorator(cache_page(60 * 10))  # Cache for 10 minutes
+    def _get_cache_key(self, request):
+        """Generate cache key including body parameters."""
+        cache_key_parts = [request.path]
+        
+        if request.query_params:
+            cache_key_parts.append(str(sorted(request.query_params.items())))
+        
+        if request.content_type == 'application/json' and request.body:
+            try:
+                body_data = json.loads(request.body)
+                cache_key_parts.append(json.dumps(body_data, sort_keys=True))
+            except (json.JSONDecodeError, ValueError):
+                pass
+        
+        cache_key = hashlib.md5('|'.join(cache_key_parts).encode()).hexdigest()
+        return f"analytics:{request.path}:{cache_key}"
+
     def get(self, request):
         """
         Top analytics.
@@ -100,7 +156,22 @@ class TopAnalyticsView(BaseAnalyticsView):
             "filters": { ...optional dynamic filters... }
         }
         """
-        payload = request.data if getattr(request, "data", None) else request.query_params
+        # Parse JSON body for GET requests if Content-Type is application/json
+        payload = request.query_params.copy()
+        if request.content_type == 'application/json' and request.body:
+            try:
+                import json
+                body_data = json.loads(request.body)
+                payload.update(body_data)
+            except (json.JSONDecodeError, ValueError):
+                pass
+        
+        # Check cache first
+        cache_key = self._get_cache_key(request)
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            return Response(cached_data)
+        
         serializer = TopAnalyticsSerializer(data=payload)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -114,7 +185,11 @@ class TopAnalyticsView(BaseAnalyticsView):
                 filters_config=filters_config,
                 time_range=data.get('time_range'),
             )
-            return Response({'data': result})
+            response_data = {'data': result}
+            
+            # Cache the data (not the Response object) for 10 minutes
+            cache.set(cache_key, response_data, 60 * 10)
+            return Response(response_data)
         except Exception as e:
             return Response(
                 {'error': str(e)},
@@ -123,7 +198,23 @@ class TopAnalyticsView(BaseAnalyticsView):
 
 class PerformanceAnalyticsView(BaseAnalyticsView):
 
-    @method_decorator(cache_page(60 * 2))  # Cache for 2 minutes
+    def _get_cache_key(self, request):
+        """Generate cache key including body parameters."""
+        cache_key_parts = [request.path]
+        
+        if request.query_params:
+            cache_key_parts.append(str(sorted(request.query_params.items())))
+        
+        if request.content_type == 'application/json' and request.body:
+            try:
+                body_data = json.loads(request.body)
+                cache_key_parts.append(json.dumps(body_data, sort_keys=True))
+            except (json.JSONDecodeError, ValueError):
+                pass
+        
+        cache_key = hashlib.md5('|'.join(cache_key_parts).encode()).hexdigest()
+        return f"analytics:{request.path}:{cache_key}"
+
     def get(self, request):
         """
         Performance analytics.
@@ -136,7 +227,21 @@ class PerformanceAnalyticsView(BaseAnalyticsView):
             "filters": { ...optional dynamic filters... }
         }
         """
-        payload = request.data if getattr(request, "data", None) else request.query_params
+        # Check cache first
+        cache_key = self._get_cache_key(request)
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            return Response(cached_data)
+        
+        # Parse JSON body for GET requests if Content-Type is application/json
+        payload = request.query_params.copy()
+        if request.content_type == 'application/json' and request.body:
+            try:
+                body_data = json.loads(request.body)
+                payload.update(body_data)
+            except (json.JSONDecodeError, ValueError):
+                pass
+        
         serializer = PerformanceAnalyticsSerializer(data=payload)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -150,7 +255,11 @@ class PerformanceAnalyticsView(BaseAnalyticsView):
                 user_id=data.get('user_id'),
                 filters_config=filters_config,
             )
-            return Response({'data': result})
+            response_data = {'data': result}
+            
+            # Cache the data (not the Response object) for 2 minutes
+            cache.set(cache_key, response_data, 60 * 2)
+            return Response(response_data)
         except Exception as e:
             return Response(
                 {'error': str(e)},

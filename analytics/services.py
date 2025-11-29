@@ -76,10 +76,11 @@ class AnalyticsService:
         return list(
             queryset
             .select_related('blog', 'blog__author')
+            .filter(blog__isnull=False)  # Ensure blog exists
             .values('blog_id', 'blog__title', 'blog__author__username')
             .annotate(
                 x=F('blog__title'),
-                y=Count('blog_id', distinct=True),
+                y=F('blog_id'),  # y represents blog ID for top blogs
                 z=Sum('count')
             )
             .order_by('-z')[:10]
@@ -224,5 +225,30 @@ class AnalyticsService:
     
     @staticmethod
     def _parse_time_range(time_range):
+        """
+        Parse time range string and return the start date.
+        Supports: 'last_7_days', 'last_30_days', 'last_90_days', 'last_year', etc.
+        """
+        now = timezone.now()
         
-        return timezone.now() - timedelta(days=30)
+        if not time_range:
+            return now - timedelta(days=30)
+        
+        time_range_lower = time_range.lower().strip()
+        
+        # Parse common time range formats
+        if 'last_7_days' in time_range_lower or '7_days' in time_range_lower:
+            return now - timedelta(days=7)
+        elif 'last_30_days' in time_range_lower or '30_days' in time_range_lower:
+            return now - timedelta(days=30)
+        elif 'last_90_days' in time_range_lower or '90_days' in time_range_lower:
+            return now - timedelta(days=90)
+        elif 'last_year' in time_range_lower or '365_days' in time_range_lower:
+            return now - timedelta(days=365)
+        elif 'last_week' in time_range_lower:
+            return now - timedelta(days=7)
+        elif 'last_month' in time_range_lower:
+            return now - timedelta(days=30)
+        else:
+            # Default to 30 days if format not recognized
+            return now - timedelta(days=30)
